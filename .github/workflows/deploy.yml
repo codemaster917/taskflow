@@ -1,0 +1,49 @@
+name: Deploy to GitHub Pages
+
+# Run this robot every time code is pushed to the main branch.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # also allows a manual start from the Actions tab
+
+# Permissions the robot needs to publish a website.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # JOB 1: build the Flutter web app.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build the web app
+        run: flutter build web --release --base-href "/taskflow/"
+
+      - name: Upload the website files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  # JOB 2: publish the built files on GitHub Pages.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
